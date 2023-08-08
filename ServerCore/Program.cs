@@ -61,7 +61,7 @@
         //}
         #endregion
 
-        //메모리 배리어
+        #region 메모리 배리어
         //A) 코드 재배치 억제
         //B) 가시성
 
@@ -69,47 +69,86 @@
         //2)Store Memory Barrier(ASM SFENCE) : Store만 막는다
         //3)Load Memory Barrier(ASM LFENCE) : Load만 막는다
 
-        static int x = 0;
-        static int y = 0;
-        static int r1 = 0;
-        static int r2 = 0;
+        //static int x = 0;
+        //static int y = 0;
+        //static int r1 = 0;
+        //static int r2 = 0;
 
-        static void Thread_1()
-        {
-            y = 1;  //Store y
+        //static void Thread_1()
+        //{
+        //    y = 1;  //Store y
 
-            Thread.MemoryBarrier();
+        //    Thread.MemoryBarrier();
 
-            r1 = x; //Load x
-        }
-        static void Thread_2()
-        {
-            x = 1;  //Store x
+        //    r1 = x; //Load x
+        //}
+        //static void Thread_2()
+        //{
+        //    x = 1;  //Store x
 
-            Thread.MemoryBarrier();
+        //    Thread.MemoryBarrier();
 
-            r2 = y; //Load y
-        }
-        static void Main(string[] args)
-        {
-            int count = 0;
-            while (true)
-            {
-                count++;
-                x = y = r1 = r2 = 0;
+        //    r2 = y; //Load y
+        //}
+        //static void Main(string[] args)
+        //{
+        //    int count = 0;
+        //    while (true)
+        //    {
+        //        count++;
+        //        x = y = r1 = r2 = 0;
 
-                Task t1 = new Task(Thread_1);
-                Task t2 = new Task(Thread_2);
-                t1.Start();
-                t2.Start();
+        //        Task t1 = new Task(Thread_1);
+        //        Task t2 = new Task(Thread_2);
+        //        t1.Start();
+        //        t2.Start();
 
-                Task.WaitAll(t1, t2);
+        //        Task.WaitAll(t1, t2);
 
-                if (r1 == 0 && r2 == 0)
-                    break;
-            }
+        //        if (r1 == 0 && r2 == 0)
+        //            break;
+        //    }
 
-            Console.WriteLine($"{count}번째 에서 종료!");
-        }
+        //    Console.WriteLine($"{count}번째 에서 종료!");
+        //}
+        #endregion
+
+        #region Interlocked
+
+        //1) 원자성 보장
+        //2) 순서 보장
+        //static int number = 0;
+
+        //static void Thread_1()
+        //{
+
+        //    for(int i =0; i < 100000; i++)
+        //    {
+        //        Interlocked.Increment(ref number);
+        //    }
+
+        //}
+
+        //static void Thread_2()
+        //{
+        //    for (int i = 0; i < 100000; i++)
+        //    {
+        //        Interlocked.Decrement(ref number);
+        //    }
+
+        //}
+
+        //static void Main(string[] args)
+        //{
+        //    Task t1 = new Task(Thread_1);
+        //    Task t2 = new Task(Thread_2);
+        //    t1.Start();
+        //    t2.Start();
+
+        //    Task.WaitAll(t1, t2);
+
+        //    Console.WriteLine(number);
+        //}
+        #endregion
     }
 }
