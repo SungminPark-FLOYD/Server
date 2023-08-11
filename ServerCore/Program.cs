@@ -334,5 +334,34 @@ namespace ServerCore
     //        }
     //    }
     #endregion
+
+    //ReadWriterLock 구현
+    class Program
+    {
+        static volatile int count = 0;
+        static Lock _lock = new Lock();
+        static void Main(string[] args)
+        {
+            Task t1 = new Task(delegate ()
+            {
+                _lock.WriteLock();
+                count++;
+                _lock.WriteUnLock();
+            });
+            Task t2 = new Task(delegate ()
+            {
+                _lock.WriteLock();
+                count--;
+                _lock.WriteUnLock();
+            });
+
+            t1.Start();
+            t2.Start();
+
+            Task.WaitAll(t1, t2);
+
+            Console.WriteLine(count);
+        }
+    }
 }
 
