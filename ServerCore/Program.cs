@@ -335,32 +335,59 @@ namespace ServerCore
     //    }
     #endregion
 
-    //ReadWriterLock 구현
+    #region ReadWriterLock 구현
+    //class Program
+    //{
+    //    static volatile int count = 0;
+    //    static Lock _lock = new Lock();
+    //    static void Main(string[] args)
+    //    {
+    //        Task t1 = new Task(delegate ()
+    //        {
+    //            _lock.WriteLock();
+    //            count++;
+    //            _lock.WriteUnLock();
+    //        });
+    //        Task t2 = new Task(delegate ()
+    //        {
+    //            _lock.WriteLock();
+    //            count--;
+    //            _lock.WriteUnLock();
+    //        });
+
+    //        t1.Start();
+    //        t2.Start();
+
+    //        Task.WaitAll(t1, t2);
+
+    //        Console.WriteLine(count);
+    //    }
+    //}
+    #endregion
+
+    //Thread Local Storage(TLS)
     class Program
     {
-        static volatile int count = 0;
-        static Lock _lock = new Lock();
+        //중복되는 값을 방지하기 위해 인자를 추가한다
+        static ThreadLocal<string> ThreadName = new ThreadLocal<string>(() => { return $"My Name Is {Thread.CurrentThread.ManagedThreadId}";  });
+
+        static void WhoAmI()
+        {
+            //ThreadName.Value = $"My Name Is {Thread.CurrentThread.ManagedThreadId}";
+            //Thread.Sleep(1000);
+
+            //재사용 표시
+            bool repeat = ThreadName.IsValueCreated;
+            if(repeat)
+                Console.WriteLine(ThreadName.Value + "(reapeat");
+            else
+                Console.WriteLine(ThreadName.Value);
+        }
         static void Main(string[] args)
         {
-            Task t1 = new Task(delegate ()
-            {
-                _lock.WriteLock();
-                count++;
-                _lock.WriteUnLock();
-            });
-            Task t2 = new Task(delegate ()
-            {
-                _lock.WriteLock();
-                count--;
-                _lock.WriteUnLock();
-            });
-
-            t1.Start();
-            t2.Start();
-
-            Task.WaitAll(t1, t2);
-
-            Console.WriteLine(count);
+            ThreadPool.SetMinThreads(1, 1);
+            ThreadPool.SetMaxThreads(3, 3);
+            Parallel.Invoke(WhoAmI, WhoAmI, WhoAmI, WhoAmI, WhoAmI, WhoAmI, WhoAmI, WhoAmI);
         }
     }
 }
