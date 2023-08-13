@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ServerCore
+namespace Multi_Thread
 {
     //재귀적 락을 허용할지(no)
     //재귀적 락을 허용하지 않으면 WriteThreadld를 bool값으로 넣어도 상관없음
