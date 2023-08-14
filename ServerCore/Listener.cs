@@ -11,13 +11,13 @@ namespace ServerCore
     class Listener
     {
         Socket _listenSocket;
-        Action<Socket> _onAcceptHandler;
+        Func<Session> _sessionFactory;
 
         //문지기 생성
-        public void Init(IPEndPoint endPoint, Action<Socket> onAcceptHandler)
+        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory)
         {
             _listenSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            _onAcceptHandler += onAcceptHandler;
+            _sessionFactory += sessionFactory;
 
             //문지기 교육
             _listenSocket.Bind(endPoint);
@@ -26,11 +26,14 @@ namespace ServerCore
             //backlog : 최대 대기수
             _listenSocket.Listen(10);
 
+            //동시 접속자 수가 많을때 예약을 많이 만든다
+            //for(int i = 0; i < 10; i++)
             SocketAsyncEventArgs args = new SocketAsyncEventArgs();
             //OnAcceptCompleted도 형식에 맞춰서 작성해줘야 한다
             args.Completed += new EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
             //최초 등록
             RegisterAccept(args);
+           
         }
 
         //예약 함수
@@ -44,12 +47,15 @@ namespace ServerCore
             if (pending == false)
                 OnAcceptCompleted(null, args);
         }
+        //별도의 스레드가 생성되어 동시에 실행 된다 -> 멀티 쓰레드문제를 생각하면서 만들어야 한다!
         void OnAcceptCompleted(object sender, SocketAsyncEventArgs args)
         {
             //return한 후 들어오는 것 처리
             if(args.SocketError == SocketError.Success)
             {
-                _onAcceptHandler.Invoke(args.AcceptSocket);
+                Session session = _sessionFactory.Invoke();
+                session.Start(args.AcceptSocket);
+                session.OnConnected(args.AcceptSocket.RemoteEndPoint);    
             }
             else
                 Console.WriteLine(args.SocketError.ToString());
