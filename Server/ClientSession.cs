@@ -19,41 +19,62 @@ namespace Server
     class PlayerInfoReq : Packet
     {
         public long playerId;
+        public string name;
 
         public PlayerInfoReq()
         {
             this.packetId = (ushort)PacketID.PlayerInfoReq;
         }
 
-        public override void Read(ArraySegment<byte> s)
+        public override void Read(ArraySegment<byte> segmnet)
         {
             ushort count = 0;
 
+            ReadOnlySpan<byte> s = new ReadOnlySpan<byte>(segmnet.Array, segmnet.Offset, segmnet.Count);
+
             //ushort size = BitConverter.ToUInt16(s.Array, s.Offset);
-            count += 2;
+            count += sizeof(ushort);
             //ushort id = BitConverter.ToUInt16(s.Array, s.Offset + count);
-            count += 2;
+            count += sizeof(ushort);
             //범위를 초과하는 값을 적용하려하면 에러가나는 안전한버전
-            this.playerId = BitConverter.ToInt64(new ReadOnlySpan<byte>(s.Array, s.Offset, s.Count - count));
-            count += 8;
+            this.playerId = BitConverter.ToInt64(s.Slice(count, s.Length - count));
+            count += sizeof(long);
+
+            //string 추출
+            ushort nameLen = BitConverter.ToUInt16(s.Slice(count, s.Length - count));
+            count += sizeof(ushort);
+            this.name = Encoding.Unicode.GetString(s.Slice(count, nameLen));
+
         }
 
         public override ArraySegment<byte> Write()
         {
             //보낸다
-            ArraySegment<byte> s = SendBufferHelper.Open(4096);
+            ArraySegment<byte> segment = SendBufferHelper.Open(4096);
 
-            bool success = true;
             //반드시 ushort버전으로 넣어야 2바이트가 입력된다
             ushort count = 0;
+            bool success = true;
+
+            Span<byte> s = new Span<byte>(segment.Array, segment.Offset, segment.Count);
 
             //success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset, s.Count), packet.size);
-            count += 2;
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.packetId);
-            count += 2;
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset + count, s.Count - count), this.playerId);
-            count += 8;
-            success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset, s.Count), count);
+            count += sizeof(ushort);
+            success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), this.packetId);
+            count += sizeof(ushort);
+            success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), this.playerId);
+            count += sizeof(long);
+
+
+            //SendBufferHelper 할당 공간에 문자열 복사하기
+            ushort nameLen = (ushort)Encoding.Unicode.GetByteCount(this.name);
+            success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), nameLen);
+            count += sizeof(ushort);
+            Encoding.Unicode.GetBytes(this.name);
+            Array.Copy(Encoding.Unicode.GetBytes(this.name), 0, segment.Array, count, nameLen);
+            count += nameLen;
+
+            success &= BitConverter.TryWriteBytes(s, count);
 
             if (success == false)
                 return null;
@@ -122,7 +143,7 @@ namespace Server
                     {
                         PlayerInfoReq p = new PlayerInfoReq();
                         p.Read(buffer);
-                        Console.WriteLine($"PlayerInfoReq: {p.playerId}");
+                        Console.WriteLine($"PlayerInfoReq: {p.playerId}, {p.name}");
                     }
                     break;
             }
