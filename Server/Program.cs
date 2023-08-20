@@ -50,7 +50,6 @@ namespace Server
         #endregion
         static void Main(string[] args)
         {
-            PacketManager.Instance.Register();
 
             //DNS -> 도메인 주소를 통해서 ip주소 찾기
             string host = Dns.GetHostName();
