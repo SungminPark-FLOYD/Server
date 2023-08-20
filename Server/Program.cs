@@ -11,6 +11,7 @@ namespace Server
     {
         //문지기
         static Listener _listener = new Listener();
+        public static GameRoom Room = new GameRoom();
 
         #region Session 이전의 처리방식
         //static void OnAcceptHandler(Socket clientSocket)
@@ -58,7 +59,7 @@ namespace Server
             IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
 
             //GameSession만들기
-            _listener.Init(endPoint, () => { return new ClientSession(); });
+            _listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
             while (true)
             {

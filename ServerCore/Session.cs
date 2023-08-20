@@ -62,6 +62,15 @@ namespace ServerCore
         public abstract void OnSend(int numOfByte);
         public abstract void OnDisconnected(EndPoint endPoint);
 
+        void Clear()
+        {
+            lock(_lock)
+            {
+                _sendQueue.Clear();
+                _pendingList.Clear();
+            }
+        }
+
         public void Start(Socket socket)
         {
             _socket = socket;
@@ -94,6 +103,7 @@ namespace ServerCore
             OnDisconnected(_socket.RemoteEndPoint);
             _socket.Shutdown(SocketShutdown.Both);
             _socket.Close();
+            Clear();
         }
 
         #region 네트워크 통신
@@ -104,18 +114,26 @@ namespace ServerCore
             //byte[] buff =  _sendQueue.Dequeue();
             //_sendArgs.SetBuffer(buff, 0, buff.Length);
 
+            if (_disconnected == 1)
+                return;
+
             while(_sendQueue.Count > 0)
             {
                 ArraySegment<byte> buff = _sendQueue.Dequeue();
                 _pendingList.Add(buff);
             }
-
             _sendArgs.BufferList = _pendingList;
-
-            //바로 성공하면 직접 호출
-            bool pending = _socket.SendAsync(_sendArgs);
-            if (pending == false)
-                OnSendCompleted(null, _sendArgs);
+            try
+            {
+                //바로 성공하면 직접 호출
+                bool pending = _socket.SendAsync(_sendArgs);
+                if (pending == false)
+                    OnSendCompleted(null, _sendArgs);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine($"RegisterSend Failed {e}");
+            }                 
         }
 
         void OnSendCompleted(object sender, SocketAsyncEventArgs args)
@@ -154,15 +172,25 @@ namespace ServerCore
         //Recv
         void RegisterRecv()
         {
+            if (_disconnected == 1)
+                return;
             //현재 유효범위 집어주기
             _recvBuffer.Clean();
             ArraySegment<byte> segment = _recvBuffer.WriteSegment;
             _recvArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
 
-            //바로 성공하면 직접 호출
-            bool pending = _socket.ReceiveAsync(_recvArgs);
-            if (pending == false)
-                OnRecvCompleted(null, _recvArgs);
+            try
+            {
+                //바로 성공하면 직접 호출
+                bool pending = _socket.ReceiveAsync(_recvArgs);
+                if (pending == false)
+                    OnRecvCompleted(null, _recvArgs);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine($"Register Failed {e}");
+            }
+            
         }
 
         //callBack으로 실행
