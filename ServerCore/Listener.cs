@@ -14,7 +14,7 @@ namespace ServerCore
         Func<Session> _sessionFactory;
 
         //문지기 생성
-        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory, int register, int backlog = 100)
+        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory, int register = 10, int backlog = 100)
         {
             _listenSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _sessionFactory += sessionFactory;

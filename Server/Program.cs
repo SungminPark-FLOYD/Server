@@ -60,8 +60,11 @@ namespace Server
             //GameSession만들기
             _listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
+
             while (true)
             {
+                Room.Push(() => Room.Flush());
+                Thread.Sleep(250);
                 //손님입장
                 //Socket clientSocket = _listener.Accept();
                 ;
