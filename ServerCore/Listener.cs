@@ -14,7 +14,7 @@ namespace ServerCore
         Func<Session> _sessionFactory;
 
         //문지기 생성
-        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory)
+        public void Init(IPEndPoint endPoint, Func<Session> sessionFactory, int register, int backlog = 100)
         {
             _listenSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _sessionFactory += sessionFactory;
@@ -23,16 +23,19 @@ namespace ServerCore
             _listenSocket.Bind(endPoint);
 
             //영업 시작
-            //backlog : 최대 대기수
-            _listenSocket.Listen(10);
-
             //동시 접속자 수가 많을때 예약을 많이 만든다
-            //for(int i = 0; i < 10; i++)
-            SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-            //OnAcceptCompleted도 형식에 맞춰서 작성해줘야 한다
-            args.Completed += new EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
-            //최초 등록
-            RegisterAccept(args);
+            //backlog : 최대 대기수
+            _listenSocket.Listen(backlog);
+
+            for (int i = 0; i < register; i ++)
+            {
+                SocketAsyncEventArgs args = new SocketAsyncEventArgs();
+                //OnAcceptCompleted도 형식에 맞춰서 작성해줘야 한다
+                args.Completed += new EventHandler<SocketAsyncEventArgs>(OnAcceptCompleted);
+                //최초 등록
+                RegisterAccept(args);
+            }
+           
            
         }
 
