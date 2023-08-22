@@ -13,6 +13,13 @@ namespace Server
         static Listener _listener = new Listener();
         public static GameRoom Room = new GameRoom();
 
+        static void FlushRoom()
+        {
+            //Push실행 후 다음 예약
+            Room.Push(() => Room.Flush());
+            JobTimer.Instance.Push(FlushRoom, 250);
+
+        }
         #region Session 이전의 처리방식
         //static void OnAcceptHandler(Socket clientSocket)
         //{
@@ -61,13 +68,15 @@ namespace Server
             _listener.Init(endPoint, () => { return SessionManager.Instance.Generate(); });
             Console.WriteLine("Listening...");
 
+            //FlushRoom();
+            JobTimer.Instance.Push(FlushRoom);
+
             while (true)
             {
-                Room.Push(() => Room.Flush());
-                Thread.Sleep(250);
+                JobTimer.Instance.Flush();
+
                 //손님입장
                 //Socket clientSocket = _listener.Accept();
-                ;
             }
 
         }
