@@ -14,7 +14,7 @@ namespace PacketGenerator
 using System;
 using System.Collections.Generic;
 
-class PacketManager
+public class PacketManager
 {{
     #region Singleton
     static PacketManager _instance = new PacketManager();
@@ -25,8 +25,7 @@ class PacketManager
     {{
         Register();
     }}
-
-    Dictionary<ushort, Action<PacketSession, ArraySegment<byte>>> _onRecv = new Dictionary<ushort, Action<PacketSession, ArraySegment<byte>>>();
+    Dictionary<ushort, Func<PacketSession, ArraySegment<byte>, IPacket>> _makeFunc = new Dictionary<ushort, Func<PacketSession, ArraySegment<byte>, IPacket>>();
     Dictionary<ushort, Action<PacketSession, IPacket>> _handler = new Dictionary<ushort, Action<PacketSession, IPacket>>();
 
 
@@ -35,7 +34,7 @@ class PacketManager
 {0}      
     }}
 
-    public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
+    public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer, Action<PacketSession, IPacket> onRecvCallback = null)
     {{
         ushort count = 0;
 
@@ -45,24 +44,35 @@ class PacketManager
         count += 2;
 
         //Dictionary에서 id찾아온다음에 인자 넘겨주기
-        Action<PacketSession, ArraySegment<byte>> action = null;
-        if (_onRecv.TryGetValue(id, out action))
-            action.Invoke(session, buffer);
+        Func<PacketSession, ArraySegment<byte>, IPacket> func = null;
+        if (_makeFunc.TryGetValue(id, out func))
+        {{
+            IPacket packet = func.Invoke(session, buffer);
+            if (onRecvCallback != null)
+                onRecvCallback.Invoke(session, packet);
+            else
+                HandlePacket(session, packet);
+        }}
     }}
 
-    void MakePacket<T>(PacketSession session, ArraySegment<byte> buffer) where T : IPacket, new()
+    T MakePacket<T>(PacketSession session, ArraySegment<byte> buffer) where T : IPacket, new()
     {{
         T pkt = new T();
         pkt.Read(buffer);
+        return pkt;
+    }}
 
+    //패킷을 만들고 잠시 대기하도록 분리
+    public void HandlePacket(PacketSession session, IPacket packet)
+    {{
         Action<PacketSession, IPacket> action = null;
-        if (_handler.TryGetValue(pkt.Protocol, out action))
-            action.Invoke(session, pkt);
+        if (_handler.TryGetValue(packet.Protocol, out action))
+            action.Invoke(session, packet);
     }}
 }}";
         //{0} 패킷 이름
         public static string managerRegisterFormat =
-@"        _onRecv.Add((ushort)PacketID.{0}, MakePacket<{0}>);
+@"        _makeFunc.Add((ushort)PacketID.{0}, MakePacket<{0}>);
         _handler.Add((ushort)PacketID.{0}, PacketHandler.{0}Handler);";
 
         //{0} 퍄킷 이름/번호 목록
@@ -79,7 +89,7 @@ public enum PacketID
    {0}
 }}
 
-interface IPacket
+public interface IPacket
 {{
 	ushort Protocol {{ get; }}
 	void Read(ArraySegment<byte> segment);
@@ -99,7 +109,7 @@ interface IPacket
         //{2} 맴버 변수 Write
         public static string packetFormat =
  @"
-class {0} : IPacket
+public class {0} : IPacket
 {{
     {1}
 

@@ -1,22 +1,13 @@
-﻿using ServerCore;
+﻿using DummyClient;
+using ServerCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace Server
+namespace DummyClient
 {
-    //public abstract class Packet
-    //{
-    //    public ushort size;
-    //    public ushort packetId;
-    //    public abstract ArraySegment<byte> Write();
-    //    public abstract void Read(ArraySegment<byte> s);
-
-    //}
-    //class PlayerInfoReq : Packet
+    //class PlayerInfoReq
     //{
     //    public long playerId;
     //    public string name;
@@ -54,12 +45,7 @@ namespace Server
 
     //    public List<SkillInfo> skills = new List<SkillInfo>();
 
-    //    public PlayerInfoReq()
-    //    {
-    //        this.packetId = (ushort)PacketID.PlayerInfoReq;
-    //    }
-
-    //    public override void Read(ArraySegment<byte> segmnet)
+    //    public void Read(ArraySegment<byte> segmnet)
     //    {
     //        ushort count = 0;
 
@@ -83,7 +69,7 @@ namespace Server
     //        skills.Clear();
     //        ushort skillLen = BitConverter.ToUInt16(s.Slice(count, s.Length - count));
     //        count += sizeof(ushort);
-    //        for (int i = 0; i < skillLen; i++)
+    //        for(int i = 0; i < skillLen; i++)
     //        {
     //            SkillInfo skill = new SkillInfo();
     //            skill.Read(s, ref count);
@@ -92,7 +78,7 @@ namespace Server
 
     //    }
 
-    //    public override ArraySegment<byte> Write()
+    //public ArraySegment<byte> Write()
     //    {
     //        //보낸다
     //        ArraySegment<byte> segment = SendBufferHelper.Open(4096);
@@ -105,10 +91,10 @@ namespace Server
 
     //        //success &= BitConverter.TryWriteBytes(new Span<byte>(s.Array, s.Offset, s.Count), packet.size);
     //        count += sizeof(ushort);
-    //        success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), this.packetId);
+    //        success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), (ushort)PacketID.PlayerInfoReq);
     //        count += sizeof(ushort);
     //        success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), this.playerId);
-    //        count += sizeof(long);
+    //        count += sizeof(long);   
 
     //        //SendBufferHelper 할당 공간에 문자열 복사하기
     //        ushort nameLen = (ushort)Encoding.Unicode.GetBytes(this.name, 0, this.name.Length, segment.Array, segment.Offset + count + sizeof(ushort));
@@ -120,7 +106,7 @@ namespace Server
     //        success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), (ushort)skills.Count);
     //        count += sizeof(ushort);
 
-    //        foreach (SkillInfo skill in skills)
+    //        foreach(SkillInfo skill in skills)
     //            success &= skill.Write(s, ref count);
 
 
@@ -149,46 +135,27 @@ namespace Server
     //}
 
 
-
     //public enum PacketID
     //{
     //    PlayerInfoReq = 1,
-    //    PlayerInfoOk = 2,
+    //    PlayerInfoOk = 2,   
     //}
 
-    class ClientSession : PacketSession
+    class ServerSession : PacketSession
     {
-        public int SessionId { get; set; }
-        public GameRoom Room { get; set; }
-        public float PosX { get; set; }
-        public float PosY { get; set; }
-        public float PosZ { get; set; }
-
         public override void OnConnected(EndPoint endPoint)
         {
-            Console.WriteLine($"OnConnected : {endPoint}");
-
-            //방접속
-            Program.Room.Push(() => Program.Room.Enter(this));
-       
-        }
-        public override void OnRecvPacket(ArraySegment<byte> buffer)
-        {
-            //싱글톤 호출
-            PacketManager.Instance.OnRecvPacket(this, buffer);
+            Console.WriteLine($"OnConnected : {endPoint}");          
         }
 
         public override void OnDisconnected(EndPoint endPoint)
         {
-            SessionManager.Instance.Remove(this);
-            
-            if(Room != null)
-            {
-                GameRoom room = Room;
-                room.Push(() => room.Leave(this));
-                Room = null;
-            }
             Console.WriteLine($"OnDisconnected : {endPoint}");
+        }
+
+        public override void OnRecvPacket(ArraySegment<byte> buffer)
+        {
+            PacketManager.Instance.OnRecvPacket(this, buffer, (s, p) => PacketQueue.Instance.Push(p));
         }
 
         public override void OnSend(int numOfByte)
